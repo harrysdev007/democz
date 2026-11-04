@@ -1,0 +1,14 @@
+import { NodeIO } from '@gltf-transform/core';
+import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
+import { dedup, prune, weld, textureCompress, meshopt } from '@gltf-transform/functions';
+import { MeshoptEncoder, MeshoptDecoder } from 'meshoptimizer';
+import sharp from 'sharp';
+import { stat } from 'node:fs/promises';
+await MeshoptEncoder.ready;
+await MeshoptDecoder.ready;
+const io = new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies({'meshopt.encoder':MeshoptEncoder,'meshopt.decoder':MeshoptDecoder});
+const document = await io.read('public/guardian-original.glb');
+console.log('Meshes',document.getRoot().listMeshes().length,'Textures',document.getRoot().listTextures().map(t=>[t.getSize(),t.getMimeType()]));
+await document.transform(dedup(),weld(),prune(),meshopt({encoder:MeshoptEncoder,level:'medium'}));
+await io.write('public/guardian.glb',document);
+console.log('Original bytes',(await stat('public/guardian-original.glb')).size,'Optimized bytes',(await stat('public/guardian.glb')).size);
